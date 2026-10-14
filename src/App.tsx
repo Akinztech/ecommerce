@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react'
-import { ArrowRight, Heart, Menu, Minus, Plus, Search, ShoppingBag, X } from 'lucide-react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { ArrowLeft, ArrowRight, Heart, Menu, Minus, Pause, Play, Plus, Search, ShoppingBag, X } from 'lucide-react'
 import './App.css'
 import './storefront.css'
 
@@ -12,6 +12,36 @@ const products: Product[] = [
   { id: 4, name: 'Everyday Linen Cover', category: 'Cushions', price: 29500, image: 'photo-1618221195710-dd6b41faaea6', detail: 'Ecru / washed linen' },
   { id: 5, name: 'Sunday Market Basket', category: 'Objects', price: 47000, image: 'photo-1595428774223-ef52624120d2', detail: 'Natural / handwoven raffia', badge: 'SMALL BATCH' },
   { id: 6, name: 'Cloudline Knit Throw', category: 'Throws', price: 78500, image: 'photo-1616486029423-aaa4789e8c9a', detail: 'Natural / recycled cotton' },
+]
+
+const heroSlides = [
+  {
+    eyebrow: 'A softer kind of everyday',
+    title: 'Make room',
+    emphasis: 'for slow living.',
+    description: 'Considered textiles and little details, made to make your home feel more like you.',
+    image: 'photo-1616486029423-aaa4789e8c9a',
+    caption: '01 / THE SLOW HOME EDIT',
+    note: 'Made for moments in between',
+  },
+  {
+    eyebrow: 'Texture with a point of view',
+    title: 'A softer',
+    emphasis: 'side of home.',
+    description: 'Natural textures, collected colors and pieces that settle in beautifully.',
+    image: 'photo-1600210492486-724fe5c67fb0',
+    caption: '02 / TEXTURE, TOGETHER',
+    note: 'Layered for the everyday',
+  },
+  {
+    eyebrow: 'Small details, lasting feeling',
+    title: 'Come home',
+    emphasis: 'to your kind.',
+    description: 'Easy, thoughtful pieces for the rituals, pauses and people that make a home.',
+    image: 'photo-1616486338812-3dadae4b4ace',
+    caption: '03 / MADE TO FEEL LIKE YOU',
+    note: 'A little more you, every day',
+  },
 ]
 
 const formatPrice = (price: number) => `₦${price.toLocaleString('en-NG')}`
@@ -27,6 +57,8 @@ function App() {
   const [email, setEmail] = useState('')
   const [subscribed, setSubscribed] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [heroSlideIndex, setHeroSlideIndex] = useState(0)
+  const [heroPaused, setHeroPaused] = useState(false)
 
   const visibleProducts = products.filter((product) => {
     const matchesCategory = category === 'All pieces' || product.category === category
@@ -36,6 +68,42 @@ function App() {
   const cartItems = products.filter((product) => cart[product.id])
   const cartCount = Object.values(cart).reduce((total, amount) => total + amount, 0)
   const cartTotal = cartItems.reduce((total, product) => total + product.price * cart[product.id], 0)
+  const activeHeroSlide = heroSlides[heroSlideIndex]
+
+  useEffect(() => {
+    if (heroPaused || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const timer = window.setInterval(() => {
+      setHeroSlideIndex((index) => (index + 1) % heroSlides.length)
+    }, 6500)
+    return () => window.clearInterval(timer)
+  }, [heroPaused])
+
+  useEffect(() => {
+    const sections = document.querySelectorAll<HTMLElement>('.motion-reveal')
+    if (!('IntersectionObserver' in window)) {
+      sections.forEach((section) => section.classList.add('is-visible'))
+      return
+    }
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible')
+          observer.unobserve(entry.target)
+        }
+      })
+    }, { threshold: 0.12, rootMargin: '0px 0px -35px 0px' })
+    sections.forEach((section) => observer.observe(section))
+    return () => observer.disconnect()
+  }, [])
+
+  function moveHeroSlide(direction: number) {
+    setHeroSlideIndex((index) => (index + direction + heroSlides.length) % heroSlides.length)
+  }
+
+  function moveProducts(direction: number) {
+    const slider = document.getElementById('product-slider')
+    if (slider) slider.scrollBy({ left: direction * slider.clientWidth * 0.82, behavior: 'smooth' })
+  }
 
   function changeCart(id: number, amount: number) {
     setCart((current) => {
@@ -72,25 +140,25 @@ function App() {
       </header>
 
       <main>
-        <section className="hero-section">
-          <div className="hero-copy"><p className="eyebrow"><span className="eyebrow-line" /> A softer kind of everyday</p><h1>Make room<br />for <em>slow living.</em></h1><p className="hero-description">Considered textiles and little details, made to make your home feel more like you.</p><div className="hero-actions"><a className="button button-dark" href="#shop">Shop the collection <ArrowRight size={16} /></a><a className="text-link" href="#story">Get to know us <ArrowRight size={14} /></a></div><div className="hero-proof"><span className="proof-stars">★★★★★</span><span>Made for everyday living</span></div></div>
-          <div className="hero-visual"><img src="https://images.unsplash.com/photo-1616486029423-aaa4789e8c9a?auto=format&fit=crop&w=1600&q=90" alt="Sunlit living room layered with cushions and natural textures" /><div className="hero-image-caption"><span>01 / THE SLOW HOME EDIT</span><span>Made for moments in between</span></div><div className="hero-stamp"><span>MADE WITH<br />INTENTION</span><i>✳</i></div></div>
+        <section className="hero-section" aria-roledescription="carousel" aria-label="Forma Home inspiration">
+          <div className="hero-copy" key={`copy-${heroSlideIndex}`}><p className="eyebrow"><span className="eyebrow-line" /> {activeHeroSlide.eyebrow}</p><h1>{activeHeroSlide.title}<br /><em>{activeHeroSlide.emphasis}</em></h1><p className="hero-description">{activeHeroSlide.description}</p><div className="hero-actions"><a className="button button-dark" href="#shop">Shop the collection <ArrowRight size={16} /></a><a className="text-link" href="#story">Get to know us <ArrowRight size={14} /></a></div><div className="hero-proof"><span className="proof-stars">★★★★★</span><span>Made for everyday living</span></div><div className="hero-slider-controls"><button className="slider-arrow" type="button" aria-label="Previous inspiration" onClick={() => moveHeroSlide(-1)}><ArrowLeft size={16} /></button><div className="slider-dots" aria-label="Choose inspiration slide">{heroSlides.map((slide, index) => <button className={index === heroSlideIndex ? 'slider-dot active' : 'slider-dot'} type="button" key={slide.caption} aria-label={`Show slide ${index + 1}`} aria-pressed={index === heroSlideIndex} onClick={() => setHeroSlideIndex(index)} />)}</div><button className="slider-arrow" type="button" aria-label="Next inspiration" onClick={() => moveHeroSlide(1)}><ArrowRight size={16} /></button><button className="slider-arrow autoplay-toggle" type="button" aria-label={heroPaused ? 'Play slideshow' : 'Pause slideshow'} onClick={() => setHeroPaused(!heroPaused)}>{heroPaused ? <Play size={14} /> : <Pause size={14} />}</button></div></div>
+          <div className="hero-visual" key={`image-${heroSlideIndex}`}><img src={`https://images.unsplash.com/${activeHeroSlide.image}?auto=format&fit=crop&w=1600&q=90`} alt="Sunlit living room styled with layered Forma Home textiles" /><div className="hero-image-caption"><span>{activeHeroSlide.caption}</span><span>{activeHeroSlide.note}</span></div><div className="hero-stamp"><span>MADE WITH<br />INTENTION</span><i>✳</i></div></div>
           <span className="hero-index">LAGOS · NIGERIA</span>
         </section>
-        <section className="promise-strip"><div><span>01</span><p>Made in small batches</p></div><div><span>02</span><p>Natural, lasting materials</p></div><div><span>03</span><p>Thoughtfully shipped to you</p></div><small>A LITTLE LESS, A LOT MORE MEANING.</small></section>
+        <section className="promise-strip motion-reveal"><div><span>01</span><p>Made in small batches</p></div><div><span>02</span><p>Natural, lasting materials</p></div><div><span>03</span><p>Thoughtfully shipped to you</p></div><small>A LITTLE LESS, A LOT MORE MEANING.</small></section>
 
-        <section className="shop-section section-pad" id="shop">
+        <section className="shop-section section-pad motion-reveal" id="shop">
           <div className="section-heading"><div><p className="eyebrow">THE GOOD THINGS</p><h2>Find your feel-good <em>piece.</em></h2></div><a className="text-link desktop-link" href="#journal">See what we're making <ArrowRight size={15} /></a></div>
-          <div className="shop-toolbar"><div className="category-tabs" role="group" aria-label="Filter by category">{['All pieces', 'Cushions', 'Throws', 'Objects'].map((item) => <button className={category === item ? 'category-tab selected' : 'category-tab'} key={item} type="button" onClick={() => setCategory(item)}>{item}</button>)}</div><span className="results-count">{visibleProducts.length} pieces</span></div>
-          {visibleProducts.length ? <div className="product-grid">{visibleProducts.map((product) => <article className="product-card" key={product.id}><div className="product-image-wrap"><img src={`https://images.unsplash.com/${product.image}?auto=format&fit=crop&w=900&q=85`} alt={product.name} loading="lazy" />{product.badge && <span className="product-note">{product.badge}</span>}<button className={saved.includes(product.id) ? 'save-button saved' : 'save-button'} type="button" aria-label={`Toggle saved status for ${product.name}`} onClick={() => setSaved((current) => current.includes(product.id) ? current.filter((id) => id !== product.id) : [...current, product.id])}><Heart size={18} fill={saved.includes(product.id) ? 'currentColor' : 'none'} /></button><button className="quick-add" type="button" onClick={() => changeCart(product.id, 1)}><Plus size={15} /> Quick add</button></div><div className="product-details"><div><button className="product-name" type="button" onClick={() => setSelectedProduct(product)}>{product.name}</button><p>{product.detail}</p></div><strong>{formatPrice(product.price)}</strong></div></article>)}</div> : <div className="empty-results"><Search size={22} /><p>No pieces found. Try another search.</p><button type="button" onClick={() => { setQuery(''); setSavedOnly(false); setCategory('All pieces') }}>Clear filters</button></div>}
+          <div className="shop-toolbar"><div className="category-tabs" role="group" aria-label="Filter by category">{['All pieces', 'Cushions', 'Throws', 'Objects'].map((item) => <button className={category === item ? 'category-tab selected' : 'category-tab'} key={item} type="button" onClick={() => setCategory(item)}>{item}</button>)}</div><span className="results-count">{visibleProducts.length} pieces</span><div className="product-slider-controls"><button className="slider-arrow" type="button" aria-label="Previous products" onClick={() => moveProducts(-1)}><ArrowLeft size={16} /></button><button className="slider-arrow" type="button" aria-label="Next products" onClick={() => moveProducts(1)}><ArrowRight size={16} /></button></div></div>
+          {visibleProducts.length ? <div className="product-grid product-slider" id="product-slider" aria-label="Product carousel" aria-roledescription="carousel">{visibleProducts.map((product) => <article className="product-card" key={product.id}><div className="product-image-wrap"><img src={`https://images.unsplash.com/${product.image}?auto=format&fit=crop&w=900&q=85`} alt={product.name} loading="lazy" />{product.badge && <span className="product-note">{product.badge}</span>}<button className={saved.includes(product.id) ? 'save-button saved' : 'save-button'} type="button" aria-label={`Toggle saved status for ${product.name}`} onClick={() => setSaved((current) => current.includes(product.id) ? current.filter((id) => id !== product.id) : [...current, product.id])}><Heart size={18} fill={saved.includes(product.id) ? 'currentColor' : 'none'} /></button><button className="quick-add" type="button" onClick={() => changeCart(product.id, 1)}><Plus size={15} /> Quick add</button></div><div className="product-details"><div><button className="product-name" type="button" onClick={() => setSelectedProduct(product)}>{product.name}</button><p>{product.detail}</p></div><strong>{formatPrice(product.price)}</strong></div></article>)}</div> : <div className="empty-results"><Search size={22} /><p>No pieces found. Try another search.</p><button type="button" onClick={() => { setQuery(''); setSavedOnly(false); setCategory('All pieces') }}>Clear filters</button></div>}
           <button className="button button-outline all-products" type="button" onClick={() => { setCategory('All pieces'); setSavedOnly(false); setQuery('') }}>Explore all pieces <ArrowRight size={15} /></button>
         </section>
 
-        <section className="look-section" id="story"><div className="look-image"><img src="https://images.unsplash.com/photo-1616486029423-aaa4789e8c9a?auto=format&fit=crop&w=1200&q=85" alt="Layered cushions and warm neutral textures" loading="lazy" /><span className="look-marker marker-one">01</span><span className="look-marker marker-two">02</span></div><div className="look-copy"><p className="eyebrow">A ROOM TO COME BACK TO</p><h2>Little layers.<br /><em>Big feeling.</em></h2><p>Texture changes everything. Start with a cushion you love, add a throw for slow mornings, and let the room become yours.</p><a className="button button-light" href="#shop">Shop the Sunday edit <ArrowRight size={16} /></a><span className="look-footnote">THE SUNDAY EDIT · NO. 04</span></div></section>
+        <section className="look-section motion-reveal" id="story"><div className="look-image"><img src="https://images.unsplash.com/photo-1616486029423-aaa4789e8c9a?auto=format&fit=crop&w=1200&q=85" alt="Layered cushions and warm neutral textures" loading="lazy" /><span className="look-marker marker-one">01</span><span className="look-marker marker-two">02</span></div><div className="look-copy"><p className="eyebrow">A ROOM TO COME BACK TO</p><h2>Little layers.<br /><em>Big feeling.</em></h2><p>Texture changes everything. Start with a cushion you love, add a throw for slow mornings, and let the room become yours.</p><a className="button button-light" href="#shop">Shop the Sunday edit <ArrowRight size={16} /></a><span className="look-footnote">THE SUNDAY EDIT · NO. 04</span></div></section>
 
-        <section className="services-section section-pad" id="services"><div className="services-copy"><p className="eyebrow">A LITTLE HELP FROM US</p><h2>Your home, with<br />a little more <em>you.</em></h2><p>Not sure where to start? Our design team helps you find the colors, textures and pieces that feel like home.</p><a className="button button-dark" href="mailto:hello@formahome.ng?subject=Design%20consultation">Book a consultation <ArrowRight size={16} /></a><span>VIRTUAL OR IN-PERSON · LAGOS</span></div><div className="services-image"><img src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85" alt="Warm, layered interior designed with natural textures" loading="lazy" /><div><span>THE FORMA APPROACH</span><span>Spaces with soul, never showroom.</span></div></div></section>
+        <section className="services-section section-pad motion-reveal" id="services"><div className="services-copy"><p className="eyebrow">A LITTLE HELP FROM US</p><h2>Your home, with<br />a little more <em>you.</em></h2><p>Not sure where to start? Our design team helps you find the colors, textures and pieces that feel like home.</p><a className="button button-dark" href="mailto:hello@formahome.ng?subject=Design%20consultation">Book a consultation <ArrowRight size={16} /></a><span>VIRTUAL OR IN-PERSON · LAGOS</span></div><div className="services-image"><img src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85" alt="Warm, layered interior designed with natural textures" loading="lazy" /><div><span>THE FORMA APPROACH</span><span>Spaces with soul, never showroom.</span></div></div></section>
 
-        <section className="journal-section section-pad" id="journal"><div className="section-heading"><div><p className="eyebrow">NOTES FROM HOME</p><h2>A little inspiration <em>for later.</em></h2></div><a className="text-link desktop-link" href="mailto:hello@formahome.ng?subject=Forma%20Journal">Read the journal <ArrowRight size={15} /></a></div><div className="journal-grid"><a className="journal-card" href="mailto:hello@formahome.ng?subject=Style%20notes"><img src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=900&q=85" alt="Styled living room with layered cushions" loading="lazy" /><span>STYLE NOTES · 5 MIN READ</span><h3>The art of a cushion that looks like you.</h3><b>Read story <ArrowRight size={14} /></b></a><a className="journal-card" href="mailto:hello@formahome.ng?subject=Choosing%20natural%20fabrics"><img src="https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=85" alt="Natural linen fabric and home details" loading="lazy" /><span>MATERIAL MATTERS · 4 MIN READ</span><h3>A little guide to living with linen.</h3><b>Read story <ArrowRight size={14} /></b></a><div className="journal-signup"><span className="signup-star">✳</span><p className="eyebrow">A NOTE FROM US</p><h3>Good things,<br /><em>occasionally.</em></h3><p>Styling notes, new arrivals and 10% off your first order.</p><form onSubmit={subscribe}><label className="sr-only" htmlFor="newsletter-email">Your email address</label><input id="newsletter-email" type="email" placeholder="Your email address" value={email} onChange={(event) => setEmail(event.target.value)} required /><button type="submit" aria-label="Subscribe">{subscribed ? '✓' : <ArrowRight size={19} />}</button></form>{subscribed && <span className="subscribe-success">You're on the list. Welcome home.</span>}</div></div></section>
+        <section className="journal-section section-pad motion-reveal" id="journal"><div className="section-heading"><div><p className="eyebrow">NOTES FROM HOME</p><h2>A little inspiration <em>for later.</em></h2></div><a className="text-link desktop-link" href="mailto:hello@formahome.ng?subject=Forma%20Journal">Read the journal <ArrowRight size={15} /></a></div><div className="journal-grid"><a className="journal-card" href="mailto:hello@formahome.ng?subject=Style%20notes"><img src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=900&q=85" alt="Styled living room with layered cushions" loading="lazy" /><span>STYLE NOTES · 5 MIN READ</span><h3>The art of a cushion that looks like you.</h3><b>Read story <ArrowRight size={14} /></b></a><a className="journal-card" href="mailto:hello@formahome.ng?subject=Choosing%20natural%20fabrics"><img src="https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=85" alt="Natural linen fabric and home details" loading="lazy" /><span>MATERIAL MATTERS · 4 MIN READ</span><h3>A little guide to living with linen.</h3><b>Read story <ArrowRight size={14} /></b></a><div className="journal-signup"><span className="signup-star">✳</span><p className="eyebrow">A NOTE FROM US</p><h3>Good things,<br /><em>occasionally.</em></h3><p>Styling notes, new arrivals and 10% off your first order.</p><form onSubmit={subscribe}><label className="sr-only" htmlFor="newsletter-email">Your email address</label><input id="newsletter-email" type="email" placeholder="Your email address" value={email} onChange={(event) => setEmail(event.target.value)} required /><button type="submit" aria-label="Subscribe">{subscribed ? '✓' : <ArrowRight size={19} />}</button></form>{subscribed && <span className="subscribe-success">You're on the list. Welcome home.</span>}</div></div></section>
 
         <section className="instagram-strip"><div className="instagram-heading"><span>Come see us at <strong>@formahome</strong></span><a href="https://www.instagram.com/" target="_blank" rel="noreferrer">FOLLOW ALONG <ArrowRight size={13} /></a></div><div className="instagram-images">{products.map((product) => <a href="https://www.instagram.com/" target="_blank" rel="noreferrer" key={product.id} aria-label="View Forma Home inspiration"><img src={`https://images.unsplash.com/${product.image}?auto=format&fit=crop&w=500&q=75`} alt="Forma Home interiors" loading="lazy" /></a>)}</div></section>
       </main>
